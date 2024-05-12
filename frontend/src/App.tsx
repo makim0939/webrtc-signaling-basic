@@ -1,14 +1,16 @@
-import { useEffect } from 'react';
-import io from 'socket.io-client';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Home from './components/Home';
 
 function App() {
-  useEffect(() => {
-    const socket = io('http://localhost:3000');
-    socket.on('connect', () => {
-      console.log('Connected to server');
-    });
-  }, []);
-  return <>a</>;
+  return (
+    <>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Home />} />
+        </Routes>
+      </BrowserRouter>
+    </>
+  );
 }
 
 export default App;
