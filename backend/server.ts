@@ -25,6 +25,17 @@ io.on('connection', (socket) => {
     users[socket.id] = name;
     socket.broadcast.emit('rename', JSON.stringify(users));
   });
+  socket.on('handshake', ({ from, to, jsonData }: { from: string; to: string; jsonData: string }) => {
+    const data = JSON.parse(jsonData);
+    if (data.type === 'request') {
+      socket.join(from + to);
+      socket.to(to).emit('handshake', { from, jsonData });
+    }
+    if (data.type === 'sdp-offer') {
+      socket.join(from + to);
+      socket.to(from).emit('handshake', { from, jsonData });
+    }
+  });
   socket.on('disconnect', () => {
     console.log('Disconnected');
     delete users[socket.id];
