@@ -1,40 +1,48 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import TextForm from './TextForm';
-import io from 'socket.io-client';
+import { Socket } from 'socket.io-client';
 
 type WebSocketData = {
   sender: number;
   type: string;
   body: string;
 };
+type UserNameObj = {
+  [key: string]: string;
+};
 
-const Home = () => {
-  const [id, setID] = useState<number | null>(null);
-  const [name, setName] = useState<string>('');
+const Home = (props: { socket: Socket }) => {
+  const [id, setId] = useState<string | null>(null);
+  const [users, setUsers] = useState<UserNameObj>({});
 
-  const socket = io('http://localhost:3000');
-  useEffect(() => {
-    socket.on('connect', () => {
-      console.log('Connected to server');
-    });
-    socket.on('message', (data: WebSocketData) => {
-      console.log(data);
-    });
-    socket.on('disconnect', () => {
-      console.log('Disconnected from server');
-    });
-    return () => {
-      socket.disconnect();
-    };
-  }, [socket]);
+  props.socket.on('connect', () => {
+    console.log('Connected to server');
+    setId('' + props.socket.id);
+  });
+  props.socket.on('message', (data: WebSocketData) => {
+    console.log(data);
+  });
+  props.socket.on('onOnline', (jsonData: string) => {
+    const data = JSON.parse(jsonData) as UserNameObj;
+    setUsers(data);
+  });
+  props.socket.on('rename', (jsonData: string) => {
+    const data = JSON.parse(jsonData) as UserNameObj;
+    setUsers(data);
+  });
+  props.socket.on('disconnect', () => {
+    console.log('Disconnected from server');
+  });
 
   const rename = (name: string) => {
-    if (!socket) return;
-    console.log(name);
-    socket.emit('rename', name);
-    setName(name);
+    if (!id) return;
+    props.socket.emit('rename', name);
+    users[id] = name;
+    setUsers(users);
   };
+  console.log(props.socket, users);
 
+  if (!id) return;
   return (
     <>
       <h2>Home</h2>
@@ -43,13 +51,18 @@ const Home = () => {
           <b>| Your Profile</b>
         </p>
         <p>ID: {id}</p>
-        <p>Name: {name}</p>
+        <p>Name: {users[id]}</p>
         <TextForm onSubmit={rename} />
       </div>
       <div>
         <p>
           <b>| Participants</b>
         </p>
+        <div>
+          {Object.keys(users).map((key) => (
+            <div key={key}>{key !== id && <p>{key + ' : ' + (users[key] ? users[key] : 'Anonymous')}</p>}</div>
+          ))}
+        </div>
       </div>
     </>
   );

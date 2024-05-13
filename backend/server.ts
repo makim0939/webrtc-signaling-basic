@@ -16,14 +16,17 @@ type UserNameObj = {
 };
 const users = new Object() as UserNameObj;
 io.on('connection', (socket) => {
-  console.log(socket.id);
   users[socket.id] = '';
+  socket.emit('onOnline', JSON.stringify(users));
+  socket.broadcast.emit('onOnline', JSON.stringify(users));
   socket.on('message', () => {});
   socket.on('rename', (name: string) => {
+    console.log('Renamed');
     users[socket.id] = name;
-    socket.emit('message', 'rename to ' + name);
+    socket.broadcast.emit('rename', JSON.stringify(users));
   });
   socket.on('disconnect', () => {
     console.log('Disconnected');
+    delete users[socket.id];
   });
 });
