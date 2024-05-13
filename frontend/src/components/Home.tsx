@@ -11,7 +11,7 @@ type UserNameObj = {
   [key: string]: string;
 };
 
-const Home = (props: { socket: Socket }) => {
+const Home = (props: { socket: Socket; connection: RTCPeerConnection }) => {
   const [id, setId] = useState<string | null>(null);
   const [users, setUsers] = useState<UserNameObj>({});
 
@@ -30,6 +30,14 @@ const Home = (props: { socket: Socket }) => {
     const data = JSON.parse(jsonData) as UserNameObj;
     setUsers(data);
   });
+  props.socket.on('handshake', ({ from, jsonData }: { from: string; jsonData: string }) => {
+    console.log('handshake');
+    const data = JSON.parse(jsonData);
+    if (data.type === 'request') {
+      if (window.confirm(users[from] ? users[from] : from + 'からリクエスト')) {
+      }
+    }
+  });
   props.socket.on('disconnect', () => {
     console.log('Disconnected from server');
   });
@@ -40,7 +48,10 @@ const Home = (props: { socket: Socket }) => {
     users[id] = name;
     setUsers(users);
   };
-  console.log(props.socket, users);
+  const connect = (key: string) => {
+    const data = JSON.stringify({ type: 'request', data: '' });
+    props.socket.emit('handshake', { from: id, to: key, jsonData: data });
+  };
 
   if (!id) return;
   return (
@@ -60,7 +71,20 @@ const Home = (props: { socket: Socket }) => {
         </p>
         <div>
           {Object.keys(users).map((key) => (
-            <div key={key}>{key !== id && <p>{key + ' : ' + (users[key] ? users[key] : 'Anonymous')}</p>}</div>
+            <div key={key}>
+              {key !== id && (
+                <p>
+                  {key + ' : ' + (users[key] ? users[key] : 'Anonymous')}{' '}
+                  <button
+                    onClick={() => {
+                      connect(key);
+                    }}
+                  >
+                    接続
+                  </button>
+                </p>
+              )}
+            </div>
           ))}
         </div>
       </div>
