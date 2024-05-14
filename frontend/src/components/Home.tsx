@@ -31,11 +31,32 @@ const Home = (props: { socket: Socket; connection: RTCPeerConnection }) => {
     setUsers(data);
   });
   props.socket.on('handshake', ({ from, jsonData }: { from: string; jsonData: string }) => {
-    console.log('handshake');
     const data = JSON.parse(jsonData);
     if (data.type === 'request') {
       if (window.confirm(users[from] ? users[from] : from + 'からリクエスト')) {
-      }
+        props.connection
+          .createOffer()
+          .then((offer) => {
+            props.connection.setLocalDescription(offer);
+          })
+          .then(() => {
+            const resData = JSON.stringify({ type: 'sdp-offer', data: props.connection.localDescription });
+            props.socket.emit('handshake', { from: id, to: from, jsonData: resData });
+          });
+      } else return;
+    }
+    if (data.type === 'sdp-offer') {
+      props.connection
+        .setRemoteDescription(new RTCSessionDescription(data.data))
+        .then(() => props.connection.createAnswer())
+        .then((answer) => props.connection.setLocalDescription(answer))
+        .then(() => {
+          const resData = JSON.stringify({ type: 'sdp-answer', data: props.connection.localDescription });
+          props.socket.emit('handshake', { from: id, to: from, jsonData: resData });
+        });
+    }
+    if (data.type === 'sdp-answer') {
+      props.connection.setRemoteDescription(new RTCSessionDescription(data.data));
     }
   });
   props.socket.on('disconnect', () => {
@@ -49,6 +70,7 @@ const Home = (props: { socket: Socket; connection: RTCPeerConnection }) => {
     setUsers(users);
   };
   const connect = (key: string) => {
+    console.log('connect');
     const data = JSON.stringify({ type: 'request', data: '' });
     props.socket.emit('handshake', { from: id, to: key, jsonData: data });
   };
